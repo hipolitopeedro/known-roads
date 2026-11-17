@@ -4,11 +4,11 @@ import 'screens/map_home_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const HorizonMotoGpsApp());
+  runApp(const KnownRoadsApp());
 }
 
-class HorizonMotoGpsApp extends StatelessWidget {
-  const HorizonMotoGpsApp({super.key});
+class KnownRoadsApp extends StatelessWidget {
+  const KnownRoadsApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +18,7 @@ class HorizonMotoGpsApp extends StatelessWidget {
     );
 
     return MaterialApp(
-      title: 'Horizon Moto GPS',
+      title: 'Known Roads',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,

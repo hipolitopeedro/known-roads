@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.pedro.horizon_moto_gps"
+    namespace = "com.pedro.known_roads"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,7 +15,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.pedro.horizon_moto_gps"
+        applicationId = "com.pedro.known_roads"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

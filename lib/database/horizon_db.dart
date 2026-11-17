@@ -13,7 +13,7 @@ class HorizonDatabase {
   HorizonDatabase._();
   static final HorizonDatabase instance = HorizonDatabase._();
 
-  static const _dbName = 'horizon_moto_gps.db';
+  static const _dbName = 'known_roads.db';
   static const _dbVersion = 1;
 
   Database? _db;

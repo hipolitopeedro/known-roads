@@ -859,7 +859,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                 urlTemplate: _darkMap
                     ? 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'
                     : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.pedro.horizon_moto_gps',
+                userAgentPackageName: 'com.pedro.known_roads',
               ),
 
               // 1. Estradas descobertas em Laranja Neon

@@ -1,4 +1,4 @@
-package com.pedro.horizon_moto_gps
+package com.pedro.known_roads
 
 import io.flutter.embedding.android.FlutterActivity
 

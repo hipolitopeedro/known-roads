@@ -46,7 +46,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HorizonMotoGPS-APK
+          name: KnownRoads-APK
           path: build/app/outputs/flutter-apk/app-release.apk
 
       - name: Publish GitHub Release with APK
@@ -54,8 +54,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.0
-          name: Horizon Moto GPS v1.0.0 (Android APK)
+          name: Known Roads v1.0.0 (Android APK)
           body: |
-            Build automático do Horizon Moto GPS (Forza Horizon Road Discovery + KTM 390 Duke Edition).
+            Build automático do Known Roads (Forza Horizon Road Discovery + KTM 390 Duke Edition).
             Baixe `app-release.apk` abaixo para instalar direto no Android.
           files: build/app/outputs/flutter-apk/app-release.apk

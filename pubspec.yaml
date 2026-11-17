@@ -1,5 +1,5 @@
-name: horizon_moto_gps
-description: "GPS estilo Forza Horizon e Gravador de Rolês — KTM 390 Duke Edition."
+name: known_roads
+description: "Known Roads — GPS com descoberta de estradas estilo Forza Horizon e gravador de rolês."
 publish_to: 'none'
 version: 1.0.0+1
 

@@ -1,4 +1,4 @@
-# Horizon Moto GPS
+# Known Roads
 
 Aplicativo Android em **Flutter/Dart** pensado para motociclistas (tema **Forza Horizon + KTM Ready to Race**): transforma o mapa da cidade e das estradas em áreas exploráveis onde **todas as ruas inéditas aparecem em cinza escuro** e **todas as estradas onde você já pilotou acendem em Laranja Neon (`#FF6600`)**.
 
@@ -36,7 +36,7 @@ Além da descoberta progressiva de mapa, o aplicativo funciona como **GPS comple
 
 O build é compilado automaticamente via **GitHub Actions** (`flutter analyze`, `flutter test` e `flutter build apk --release`):
 
-- Download direto: [app-release.apk (v1.0.0)](https://github.com/hipolitopeedro/horizon-moto-gps/releases/latest/download/app-release.apk)
+- Download direto: [app-release.apk (v1.0.0)](https://github.com/hipolitopeedro/known-roads/releases/latest/download/app-release.apk)
 
 ---
 

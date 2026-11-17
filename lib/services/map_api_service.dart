@@ -11,7 +11,7 @@ import '../models/models.dart';
 /// - OSRM: cálculo de rotas rua a rua + instruções de manobra.
 class MapApiService {
   static const _userAgent =
-      'HorizonMotoGPS/1.0 (https://github.com/hipolitopeedro/horizon-moto-gps)';
+      'KnownRoads/1.0 (https://github.com/hipolitopeedro/known-roads)';
 
   /// Busca endereços, bairros, cidades ou comércios via Nominatim (OSM).
   static Future<List<PlaceResult>> searchPlaces(

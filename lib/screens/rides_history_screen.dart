@@ -132,7 +132,7 @@ class _RidesHistoryScreenState extends State<RidesHistoryScreen> {
         appBar: AppBar(
           backgroundColor: const Color(0xFF141821),
           title: const Text(
-            'DIÁRIO DE ROLÊS • DUKE 390',
+            'KNOWN ROADS • DIÁRIO',
             style: TextStyle(
               fontWeight: FontWeight.w800,
               fontSize: 16,

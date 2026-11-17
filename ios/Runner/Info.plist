@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Horizon Moto GPS</string>
+	<string>Known Roads</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>horizon_moto_gps</string>
+	<string>known_roads</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -25,11 +25,11 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>O Horizon Moto GPS precisa de acesso à câmera para salvar checkpoints com foto durante o rolê.</string>
+	<string>O Known Roads precisa de acesso à câmera para salvar checkpoints com foto durante o rolê.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>O Horizon Moto GPS precisa de acesso à galeria para gerenciar as fotos dos seus checkpoints.</string>
+	<string>O Known Roads precisa de acesso à galeria para gerenciar as fotos dos seus checkpoints.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>O Horizon Moto GPS usa sua localização em tempo real para desbloquear estradas percorridas, navegar e alertar radares.</string>
+	<string>O Known Roads usa sua localização em tempo real para desbloquear estradas percorridas, navegar e alertar radares.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
