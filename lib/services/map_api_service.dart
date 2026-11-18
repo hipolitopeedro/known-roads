@@ -13,34 +13,25 @@ class MapApiService {
   static const _userAgent =
       'KnownRoads/1.0 (https://github.com/hipolitopeedro/known-roads)';
 
-  /// Busca endereços, bairros, cidades ou comércios via Nominatim (OSM).
-  static Future<List<PlaceResult>> searchPlaces(
-    String query, {
-    LatLng? near,
-  }) async {
-    final trimmed = query.trim();
-    if (trimmed.isEmpty) return [];
-
-    final params = <String, String>{
-      'q': trimmed,
-      'format': 'jsonv2',
-      'limit': '10',
-      'addressdetails': '1',
-      'accept-language': 'pt-BR',
-    };
-
-    // Prioriza resultados perto da localização atual do motociclista.
-    if (near != null) {
-      final deltaLon = 0.45;
-      final deltaLat = 0.45;
-      params['viewbox'] =
-          '${near.longitude - deltaLon},${near.latitude + deltaLat},'
-          '${near.longitude + deltaLon},${near.latitude - deltaLat}';
+  static String _normalizeText(String s) {
+    const withAccents = 'áàãâäéèêëíìîïóòõôöúùûüçñ';
+    const cleanChars = 'aaaaaeeeeiiiiooooouuuucn';
+    var res = s.toLowerCase().trim();
+    for (int i = 0; i < withAccents.length; i++) {
+      res = res.replaceAll(withAccents[i], cleanChars[i]);
     }
+    return res;
+  }
 
+  static Future<List<PlaceResult>> _queryNominatim(
+    Map<String, String> params,
+  ) async {
     final uri = Uri.https('nominatim.openstreetmap.org', '/search', params);
     final res = await http
-        .get(uri, headers: {'User-Agent': _userAgent})
+        .get(uri, headers: {
+          'User-Agent': _userAgent,
+          'Accept': 'application/json',
+        })
         .timeout(const Duration(seconds: 12));
 
     if (res.statusCode != 200) {
@@ -51,8 +42,9 @@ class MapApiService {
     return list.map((item) {
       final map = item as Map<String, dynamic>;
       final display = (map['display_name'] as String?) ?? '';
-      final name = (map['name'] as String?)?.isNotEmpty == true
-          ? map['name'] as String
+      final rawName = (map['name'] as String?)?.trim() ?? '';
+      final name = rawName.isNotEmpty
+          ? rawName
           : display.split(',').first.trim();
       final cat = (map['type'] as String?) ?? 'local';
       return PlaceResult(
@@ -65,97 +57,157 @@ class MapApiService {
     }).toList();
   }
 
-  /// Busca comércios próximos por categoria via Overpass API em um raio de 4 km:
-  /// `fuel` (postos), `workshop` (oficinas), `food` (lanches/cafés), `viewpoint` (mirantes).
+  /// Busca endereços, estabelecimentos, faculdades, shoppings e locais salvos
+  /// pelo nome (sem exigir nome de rua).
+  static Future<List<PlaceResult>> searchPlaces(
+    String query, {
+    LatLng? near,
+    List<PlaceResult> savedPlaces = const [],
+  }) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return [];
+
+    final normQuery = _normalizeText(trimmed);
+    final combined = <PlaceResult>[];
+
+    // 1) Busca instantânea nos locais salvos (Faculdade, Trabalho, Casa...) e POIs de BH
+    for (final p in [...savedPlaces, ...builtInBhPlaces]) {
+      final hay = _normalizeText('${p.name} ${p.subtitle} ${p.category}');
+      if (hay.contains(normQuery)) {
+        combined.add(p);
+      }
+    }
+
+    // 2) Busca local delimitada perto do usuário (prioriza comércios e locais de BH)
+    List<PlaceResult> remote = [];
+    try {
+      if (near != null) {
+        const delta = 0.25;
+        remote = await _queryNominatim({
+          'q': trimmed,
+          'format': 'jsonv2',
+          'limit': '15',
+          'countrycodes': 'br',
+          'accept-language': 'pt-BR',
+          'viewbox':
+              '${near.longitude - delta},${near.latitude + delta},'
+              '${near.longitude + delta},${near.latitude - delta}',
+          'bounded': '1',
+        });
+      }
+      // Se achou poucos locais na região próxima, amplia para o Brasil todo
+      if (remote.length < 3) {
+        final wide = await _queryNominatim({
+          'q': trimmed,
+          'format': 'jsonv2',
+          'limit': '12',
+          'countrycodes': 'br',
+          'accept-language': 'pt-BR',
+          if (near != null)
+            'viewbox':
+                '${near.longitude - 0.35},${near.latitude + 0.35},'
+                '${near.longitude + 0.35},${near.latitude - 0.35}',
+        });
+        remote = [...remote, ...wide];
+      }
+    } catch (_) {
+      // Se estiver offline, ainda retorna favoritos/POIs locais encontrados acima
+      if (combined.isEmpty) rethrow;
+    }
+
+    combined.addAll(remote);
+
+    // 3) Deduplica segmentos repetidos da mesma rua/local próximos (< 200m)
+    final deduped = <PlaceResult>[];
+    for (final item in combined) {
+      final alreadyExists = deduped.any((existing) =>
+          _normalizeText(existing.name) == _normalizeText(item.name) &&
+          GridCellHelper.haversineMeters(existing.latLng, item.latLng) < 200.0);
+      if (!alreadyExists) {
+        deduped.add(item);
+      }
+    }
+    return deduped;
+  }
+
+  /// Busca comércios próximos usando Nominatim `bounded=1` (rápido e estável,
+  /// sem sofrer bloqueio 406 do Overpass) em um raio de ~9 km do mapa.
   static Future<List<PlaceResult>> searchCategoryNearby(
     String categoryKey,
     LatLng center,
   ) async {
-    final String filter;
-    final String labelFallback;
-    switch (categoryKey) {
-      case 'fuel':
-        filter = '["amenity"="fuel"]';
-        labelFallback = 'Posto de Combustível';
-        break;
-      case 'workshop':
-        filter = '["shop"~"motorcycle|motorcycle_repair|car_repair"]';
-        labelFallback = 'Oficina / Moto Peças';
-        break;
-      case 'food':
-        filter = '["amenity"~"cafe|fast_food|restaurant"]';
-        labelFallback = 'Café / Lanchonete';
-        break;
-      case 'viewpoint':
-      default:
-        filter = '["tourism"~"viewpoint|attraction"]';
-        labelFallback = 'Mirante / Ponto Turístico';
-        break;
+    const delta = 0.08; // ~9 km ao redor do centro
+    final viewbox =
+        '${center.longitude - delta},${center.latitude + delta},'
+        '${center.longitude + delta},${center.latitude - delta}';
+
+    Map<String, String> params(String q) => {
+          'q': q,
+          'format': 'jsonv2',
+          'limit': '20',
+          'countrycodes': 'br',
+          'accept-language': 'pt-BR',
+          'viewbox': viewbox,
+          'bounded': '1',
+        };
+
+    final rawResults = <PlaceResult>[];
+    if (categoryKey == 'fuel') {
+      rawResults.addAll(await _queryNominatim(params('[amenity=fuel]')));
+    } else if (categoryKey == 'workshop') {
+      rawResults.addAll(await _queryNominatim(params('[shop=car_repair]')));
+      if (rawResults.length < 6) {
+        try {
+          rawResults.addAll(await _queryNominatim(params('oficina')));
+        } catch (_) {}
+      }
+    } else if (categoryKey == 'food') {
+      rawResults.addAll(await _queryNominatim(params('[amenity=cafe]')));
+      if (rawResults.length < 6) {
+        try {
+          rawResults.addAll(await _queryNominatim(params('[amenity=fast_food]')));
+        } catch (_) {}
+      }
+    } else {
+      try {
+        rawResults.addAll(await _queryNominatim(params('[tourism=viewpoint]')));
+      } catch (_) {}
+      rawResults.addAll(builtInBhPlaces.where((p) =>
+          p.category == 'mirante' || p.category == 'shopping'));
     }
 
-    final overpassQl = '''
-[out:json][timeout:12];
-(
-  node$filter(around:4500,${center.latitude},${center.longitude});
-  way$filter(around:4500,${center.latitude},${center.longitude});
-);
-out center 18;
-''';
-
-    final uri = Uri.https('lz4.overpass-api.de', '/api/interpreter');
-    final res = await http
-        .post(
-          uri,
-          headers: {
-            'User-Agent': _userAgent,
-            'Accept': 'application/json',
-          },
-          body: {'data': overpassQl},
-        )
-        .timeout(const Duration(seconds: 15));
-
-    if (res.statusCode != 200) {
-      throw Exception('Overpass indisponível no momento (${res.statusCode}).');
+    // Remove itens sem nome significativo ou duplicados próximos (< 120m)
+    final cleaned = <PlaceResult>[];
+    for (final r in rawResults) {
+      final name = r.name.isNotEmpty
+          ? r.name
+          : categoryKey == 'fuel'
+              ? 'Posto de Combustível'
+              : categoryKey == 'workshop'
+                  ? 'Oficina'
+                  : 'Comércio';
+      final dup = cleaned.any(
+        (c) => GridCellHelper.haversineMeters(c.latLng, r.latLng) < 120.0,
+      );
+      if (!dup) {
+        final distKm =
+            GridCellHelper.haversineMeters(center, r.latLng) / 1000.0;
+        cleaned.add(PlaceResult(
+          name: name,
+          subtitle: '${distKm.toStringAsFixed(2)} km • ${r.subtitle}',
+          lat: r.lat,
+          lng: r.lng,
+          category: categoryKey,
+        ));
+      }
     }
 
-    final json = jsonDecode(res.body) as Map<String, dynamic>;
-    final elements = (json['elements'] as List<dynamic>? ?? []);
-    final results = <PlaceResult>[];
-
-    for (final raw in elements) {
-      final el = raw as Map<String, dynamic>;
-      final tags = (el['tags'] as Map<String, dynamic>?) ?? {};
-      final double? lat = (el['lat'] as num?)?.toDouble() ??
-          ((el['center'] as Map<String, dynamic>?)?['lat'] as num?)?.toDouble();
-      final double? lon = (el['lon'] as num?)?.toDouble() ??
-          ((el['center'] as Map<String, dynamic>?)?['lon'] as num?)?.toDouble();
-      if (lat == null || lon == null) continue;
-
-      final name = (tags['name'] as String?) ??
-          (tags['brand'] as String?) ??
-          labelFallback;
-      final street = tags['addr:street'] as String?;
-      final distM = GridCellHelper.haversineMeters(center, LatLng(lat, lon));
-      final subtitle = [
-        if (street != null && street.isNotEmpty) street,
-        '${(distM / 1000).toStringAsFixed(2)} km de distância',
-      ].join(' • ');
-
-      results.add(PlaceResult(
-        name: name,
-        subtitle: subtitle,
-        lat: lat,
-        lng: lon,
-        category: categoryKey,
-      ));
-    }
-
-    results.sort((a, b) {
+    cleaned.sort((a, b) {
       final da = GridCellHelper.haversineMeters(center, a.latLng);
       final db = GridCellHelper.haversineMeters(center, b.latLng);
       return da.compareTo(db);
     });
-    return results;
+    return cleaned;
   }
 
   /// Envia consulta Overpass tentando primeiro o mirror rápido `lz4` e, em caso

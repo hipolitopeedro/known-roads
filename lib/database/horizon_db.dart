@@ -31,6 +31,19 @@ class HorizonDatabase {
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
+      onOpen: (db) async {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS saved_places (
+            id       INTEGER PRIMARY KEY AUTOINCREMENT,
+            title    TEXT    NOT NULL,
+            subtitle TEXT    NOT NULL,
+            lat      REAL    NOT NULL,
+            lng      REAL    NOT NULL,
+            category TEXT    NOT NULL
+          )
+        ''');
+        await _seedInitialSavedPlaces(db);
+      },
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE rides (
@@ -84,8 +97,33 @@ class HorizonDatabase {
             FOREIGN KEY (ride_id) REFERENCES rides (id) ON DELETE SET NULL
           )
         ''');
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS saved_places (
+            id       INTEGER PRIMARY KEY AUTOINCREMENT,
+            title    TEXT    NOT NULL,
+            subtitle TEXT    NOT NULL,
+            lat      REAL    NOT NULL,
+            lng      REAL    NOT NULL,
+            category TEXT    NOT NULL
+          )
+        ''');
+        await _seedInitialSavedPlaces(db);
       },
     );
+  }
+
+  Future<void> _seedInitialSavedPlaces(Database db) async {
+    final existing = await db.query('saved_places', limit: 1);
+    if (existing.isEmpty) {
+      await db.insert('saved_places', {
+        'title': 'Faculdade (Dom Helder Câmara)',
+        'subtitle': 'Rua Álvares Maciel, 628 - Santa Efigênia, Belo Horizonte',
+        'lat': -19.921650,
+        'lng': -43.921980,
+        'category': 'faculdade',
+      });
+    }
   }
 
   /// Carrega todas as células já descobertas no banco.
@@ -214,5 +252,44 @@ class HorizonDatabase {
   Future<void> deleteCheckpoint(int id) async {
     final db = await database;
     await db.delete('checkpoints', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Lista locais favoritos salvos (ex.: Faculdade, Trabalho, Casa).
+  Future<List<PlaceResult>> listSavedPlaces() async {
+    final db = await database;
+    final rows = await db.query('saved_places', orderBy: 'id ASC');
+    return rows
+        .map((r) => PlaceResult(
+              name: r['title'] as String,
+              subtitle: r['subtitle'] as String,
+              lat: (r['lat'] as num).toDouble(),
+              lng: (r['lng'] as num).toDouble(),
+              category: r['category'] as String,
+            ))
+        .toList();
+  }
+
+  /// Salva ou substitui um local favorito pelo nome (ex.: "Casa", "Trabalho").
+  Future<void> insertSavedPlace(PlaceResult place) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete(
+        'saved_places',
+        where: 'LOWER(title) = LOWER(?)',
+        whereArgs: [place.name],
+      );
+      await txn.insert('saved_places', {
+        'title': place.name,
+        'subtitle': place.subtitle,
+        'lat': place.lat,
+        'lng': place.lng,
+        'category': place.category,
+      });
+    });
+  }
+
+  Future<void> deleteSavedPlace(String title) async {
+    final db = await database;
+    await db.delete('saved_places', where: 'title = ?', whereArgs: [title]);
   }
 }

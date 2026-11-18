@@ -285,3 +285,113 @@ const List<RadarPoint> defaultBhRadars = [
   RadarPoint(lat: -19.928900, lng: -43.949800, speedLimit: 60, label: 'Radar Av. Álvares Cabral / Santo Agostinho', isCustom: false),
   RadarPoint(lat: -19.924800, lng: -43.938500, speedLimit: 60, label: 'Radar Av. Bias Fortes / Centro', isCustom: false),
 ];
+
+/// Pontos de interesse e referências conhecidas de BH/MG para pesquisa direta por nome
+/// (faculdades, shoppings, praças, mirantes e serras para rolê de moto).
+const List<PlaceResult> builtInBhPlaces = [
+  PlaceResult(
+    name: 'Faculdade Dom Helder Câmara (Escola Superior Dom Helder)',
+    subtitle: 'Rua Álvares Maciel, 628 - Santa Efigênia, Belo Horizonte - MG',
+    lat: -19.921650,
+    lng: -43.921980,
+    category: 'faculdade',
+  ),
+  PlaceResult(
+    name: 'UFMG Campus Pampulha',
+    subtitle: 'Av. Pres. Antônio Carlos, 6627 - Pampulha, Belo Horizonte - MG',
+    lat: -19.869100,
+    lng: -43.966400,
+    category: 'faculdade',
+  ),
+  PlaceResult(
+    name: 'PUC Minas Coração Eucarístico',
+    subtitle: 'Av. Dom José Gaspar, 500 - Coração Eucarístico, Belo Horizonte - MG',
+    lat: -19.922500,
+    lng: -43.992600,
+    category: 'faculdade',
+  ),
+  PlaceResult(
+    name: 'CEFET-MG Campus I',
+    subtitle: 'Av. Amazonas, 5253 - Nova Suíça, Belo Horizonte - MG',
+    lat: -19.938600,
+    lng: -43.977200,
+    category: 'faculdade',
+  ),
+  PlaceResult(
+    name: 'Praça da Liberdade',
+    subtitle: 'Savassi / Funcionários, Belo Horizonte - MG',
+    lat: -19.932050,
+    lng: -43.937980,
+    category: 'mirante',
+  ),
+  PlaceResult(
+    name: 'Praça do Papa',
+    subtitle: 'Mangabeiras, Belo Horizonte - MG (ponto clássico de rolê)',
+    lat: -19.947850,
+    lng: -43.914200,
+    category: 'mirante',
+  ),
+  PlaceResult(
+    name: 'Mirante do Mangabeiras',
+    subtitle: 'Rua Pedro José Pardo, 1000 - Mangabeiras, Belo Horizonte - MG',
+    lat: -19.954400,
+    lng: -43.909200,
+    category: 'mirante',
+  ),
+  PlaceResult(
+    name: 'Topo do Mundo (Serra da Moeda)',
+    subtitle: 'Estrada da Serra, Brumadinho / Nova Lima - MG (rolê serra)',
+    lat: -20.119400,
+    lng: -43.978100,
+    category: 'mirante',
+  ),
+  PlaceResult(
+    name: 'Macacos (São Sebastião das Águas Claras)',
+    subtitle: 'Nova Lima - MG (estrada e bares para motociclistas)',
+    lat: -20.044200,
+    lng: -43.922800,
+    category: 'mirante',
+  ),
+  PlaceResult(
+    name: 'BH Shopping',
+    subtitle: 'Rodovia BR-356, 3049 - Belvedere, Belo Horizonte - MG',
+    lat: -19.974600,
+    lng: -43.946100,
+    category: 'shopping',
+  ),
+  PlaceResult(
+    name: 'Pátio Savassi',
+    subtitle: 'Av. do Contorno, 6061 - São Pedro / Savassi, Belo Horizonte - MG',
+    lat: -19.940350,
+    lng: -43.933850,
+    category: 'shopping',
+  ),
+  PlaceResult(
+    name: 'DiamondMall',
+    subtitle: 'Av. Olegário Maciel, 1600 - Lourdes, Belo Horizonte - MG',
+    lat: -19.927750,
+    lng: -43.947250,
+    category: 'shopping',
+  ),
+  PlaceResult(
+    name: 'Shopping Del Rey',
+    subtitle: 'Av. Presidente Carlos Luz, 3001 - Caiçaras, Belo Horizonte - MG',
+    lat: -19.893500,
+    lng: -43.968600,
+    category: 'shopping',
+  ),
+  PlaceResult(
+    name: 'Mercado Central de Belo Horizonte',
+    subtitle: 'Av. Augusto de Lima, 744 - Centro, Belo Horizonte - MG',
+    lat: -19.923100,
+    lng: -43.943700,
+    category: 'comercio',
+  ),
+  PlaceResult(
+    name: 'Estádio Mineirão',
+    subtitle: 'Av. Antônio Abrahão Caram, 1001 - Pampulha, Belo Horizonte - MG',
+    lat: -19.865900,
+    lng: -43.971100,
+    category: 'ponto',
+  ),
+];

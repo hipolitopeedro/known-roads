@@ -49,6 +49,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   List<RadarPoint> _osmRadars = List<RadarPoint>.from(defaultBhRadars);
   List<RadarPoint> _customRadars = [];
   List<PhotoCheckpoint> _checkpoints = [];
+  List<PlaceResult> _savedPlaces = [];
 
   // Trajeto contínuo em modo livre (desbloqueia estradas mesmo sem apertar Gravar)
   final List<LatLng> _freeRoamTrail = [];
@@ -102,6 +103,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
     final rides = await db.listRides(includePoints: true);
     final customRadars = await db.listCustomRadars();
     final checkpoints = await db.listCheckpoints();
+    final savedPlaces = await db.listSavedPlaces();
 
     if (!mounted) return;
     setState(() {
@@ -110,6 +112,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
           rides.where((r) => r.points.length >= 2).map((r) => r.points).toList();
       _customRadars = customRadars;
       _checkpoints = checkpoints;
+      _savedPlaces = savedPlaces;
     });
   }
 
@@ -367,7 +370,11 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
     FocusScope.of(context).unfocus();
     setState(() => _isSearching = true);
     try {
-      final results = await MapApiService.searchPlaces(q, near: _currentPos);
+      final results = await MapApiService.searchPlaces(
+        q,
+        near: _currentPos,
+        savedPlaces: _savedPlaces,
+      );
       if (!mounted) return;
       setState(() {
         _searchResults = results;
@@ -388,15 +395,15 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   Future<void> _searchCategory(String key, String label) async {
     setState(() => _isSearching = true);
     try {
-      final results =
-          await MapApiService.searchCategoryNearby(key, _currentPos);
+      final center = _mapController.camera.center;
+      final results = await MapApiService.searchCategoryNearby(key, center);
       if (!mounted) return;
       setState(() {
         _searchResults = results;
         _isSearching = false;
       });
       if (results.isEmpty) {
-        _showToast('Nenhum(a) $label encontrado(a) em 4,5 km.');
+        _showToast('Nenhum(a) $label encontrado(a) nesta região.');
       } else {
         _showPlacesBottomSheet('$label próximos', results);
       }
@@ -765,6 +772,181 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
     });
   }
 
+  Future<void> _showSaveFavoriteDialog({LatLng? atPoint, String? presetName}) async {
+    final target = atPoint ?? _currentPos;
+    final nameCtrl = TextEditingController(text: presetName ?? '');
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF161922),
+        title: const Text('Salvar Local Favorito'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 6,
+              children: ['Casa', 'Trabalho', 'Faculdade', 'Oficina'].map((tag) {
+                return ActionChip(
+                  label: Text(tag, style: const TextStyle(fontSize: 12)),
+                  onPressed: () => nameCtrl.text = tag,
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nome (ex.: Trabalho - Atex, Casa)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFFF6600),
+              foregroundColor: Colors.black,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+
+    if (saved != true || nameCtrl.text.trim().isEmpty) return;
+    final name = nameCtrl.text.trim();
+    await HorizonDatabase.instance.insertSavedPlace(PlaceResult(
+      name: name,
+      subtitle:
+          'Salvo em ${target.latitude.toStringAsFixed(5)}, ${target.longitude.toStringAsFixed(5)}',
+      lat: target.latitude,
+      lng: target.longitude,
+      category: 'favorito',
+    ));
+    await _loadPersistedData();
+    _showToast('"$name" salvo nos Favoritos! Agora você pode buscar pelo nome.');
+  }
+
+  void _showFavoritesSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF141821),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.star, color: Color(0xFFFF6600)),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Meus Locais (Casa, Trabalho, Faculdade)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _showSaveFavoriteDialog(atPoint: _currentPos);
+                    },
+                    icon: const Icon(Icons.add_location_alt,
+                        size: 16, color: Color(0xFF00E5FF)),
+                    label: const Text('Salvar Atual',
+                        style: TextStyle(color: Color(0xFF00E5FF))),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: Colors.white12),
+            if (_savedPlaces.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(20),
+                child: Text(
+                  'Nenhum favorito salvo. Segure o dedo no mapa em cima do seu trabalho ou casa para salvar!',
+                  style: TextStyle(color: Colors.white60, fontSize: 12),
+                ),
+              )
+            else
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _savedPlaces.length,
+                  separatorBuilder: (_, __) =>
+                      const Divider(height: 1, color: Colors.white10),
+                  itemBuilder: (_, i) {
+                    final place = _savedPlaces[i];
+                    return ListTile(
+                      leading: const Icon(Icons.bookmark,
+                          color: Color(0xFFFF6600)),
+                      title: Text(
+                        place.name,
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: Text(
+                        place.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 11),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: 'Remover favorito',
+                            icon: const Icon(Icons.delete_outline,
+                                color: Colors.white38, size: 18),
+                            onPressed: () async {
+                              await HorizonDatabase.instance
+                                  .deleteSavedPlace(place.name);
+                              await _loadPersistedData();
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              _showToast('Removido "${place.name}".');
+                            },
+                          ),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF00E5FF),
+                              foregroundColor: Colors.black,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _navigateToPlace(place);
+                            },
+                            child: const Text('Ir'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _onMapLongPress(TapPosition _, LatLng point) {
     showModalBottomSheet(
       context: context,
@@ -790,6 +972,15 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                   lng: point.longitude,
                   category: 'pin',
                 ));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.star, color: Color(0xFFFF6600)),
+              title: const Text('Salvar nos Favoritos (Casa / Trabalho)',
+                  style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showSaveFavoriteDialog(atPoint: point);
               },
             ),
             ListTile(
@@ -1088,7 +1279,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                             style: const TextStyle(
                                 color: Colors.white, fontSize: 14),
                             decoration: const InputDecoration(
-                              hintText: 'Buscar rua, comércio, posto...',
+                              hintText: 'Buscar lugar, faculdade, rua...',
                               hintStyle: TextStyle(
                                   color: Colors.white54, fontSize: 13),
                               border: InputBorder.none,
@@ -1128,7 +1319,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                   ),
                 ),
 
-                // Chips rápidos de Comércios e Radares + Progresso Forza
+                // Chips rápidos de Favoritos, Comércios e Radares + Progresso Forza
                 SizedBox(
                   height: 36,
                   child: ListView(
@@ -1139,6 +1330,8 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                         '${discoveredKm.toStringAsFixed(2)} km descobertos (${_exploredCells.length})',
                       ),
                       const SizedBox(width: 6),
+                      _quickChip(Icons.star, 'Favoritos', _showFavoritesSheet),
+                      const SizedBox(width: 6),
                       _quickChip(Icons.local_gas_station, 'Postos',
                           () => _searchCategory('fuel', 'Postos')),
                       const SizedBox(width: 6),
@@ -1148,9 +1341,12 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                       _quickChip(Icons.fastfood, 'Cafés',
                           () => _searchCategory('food', 'Cafés e Lanches')),
                       const SizedBox(width: 6),
+                      _quickChip(Icons.landscape, 'Mirantes',
+                          () => _searchCategory('viewpoint', 'Mirantes e Shoppings')),
+                      const SizedBox(width: 6),
                       _quickChip(
                         Icons.speed,
-                        _loadingRadars ? 'Buscando...' : 'Radares OSM',
+                        _loadingRadars ? 'Buscando...' : 'Radares',
                         () => _loadRadarsAround(_mapController.camera.center),
                       ),
                       const SizedBox(width: 6),
