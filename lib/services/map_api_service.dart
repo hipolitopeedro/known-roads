@@ -102,11 +102,14 @@ class MapApiService {
 out center 18;
 ''';
 
-    final uri = Uri.https('overpass-api.de', '/api/interpreter');
+    final uri = Uri.https('lz4.overpass-api.de', '/api/interpreter');
     final res = await http
         .post(
           uri,
-          headers: {'User-Agent': _userAgent},
+          headers: {
+            'User-Agent': _userAgent,
+            'Accept': 'application/json',
+          },
           body: {'data': overpassQl},
         )
         .timeout(const Duration(seconds: 15));
@@ -155,35 +158,57 @@ out center 18;
     return results;
   }
 
-  /// Busca radares de velocidade (`highway=speed_camera`) no OpenStreetMap
-  /// em um raio de 6 km ao redor do usuário.
+  /// Envia consulta Overpass tentando primeiro o mirror rápido `lz4` e, em caso
+  /// de falha, usando o endpoint principal como fallback.
+  static Future<Map<String, dynamic>> _postOverpass(String overpassQl) async {
+    const hosts = ['lz4.overpass-api.de', 'overpass-api.de'];
+    Exception? lastError;
+
+    for (final host in hosts) {
+      try {
+        final uri = Uri.https(host, '/api/interpreter');
+        final res = await http
+            .post(
+              uri,
+              headers: {
+                'User-Agent': _userAgent,
+                'Accept': 'application/json',
+              },
+              body: {'data': overpassQl},
+            )
+            .timeout(const Duration(seconds: 15));
+        if (res.statusCode == 200) {
+          return jsonDecode(res.body) as Map<String, dynamic>;
+        }
+        lastError = Exception('Overpass $host retornou ${res.statusCode}');
+      } catch (e) {
+        lastError = Exception(e.toString());
+      }
+    }
+    throw lastError ?? Exception('Servidores Overpass indisponíveis.');
+  }
+
+  /// Busca radares de velocidade (`highway=speed_camera` e `enforcement=maxspeed`)
+  /// no OpenStreetMap em um raio de 12 km ao redor da posição informada.
   static Future<List<RadarPoint>> fetchRadarsNearby(LatLng center) async {
     final overpassQl = '''
-[out:json][timeout:12];
-node["highway"="speed_camera"](around:6000,${center.latitude},${center.longitude});
-out 60;
+[out:json][timeout:15];
+(
+  node["highway"="speed_camera"](around:12000,${center.latitude},${center.longitude});
+  relation["enforcement"="maxspeed"](around:12000,${center.latitude},${center.longitude});
+);
+out center 120;
 ''';
-    final uri = Uri.https('overpass-api.de', '/api/interpreter');
-    final res = await http
-        .post(
-          uri,
-          headers: {'User-Agent': _userAgent},
-          body: {'data': overpassQl},
-        )
-        .timeout(const Duration(seconds: 15));
-
-    if (res.statusCode != 200) {
-      throw Exception('Falha ao buscar radares (${res.statusCode}).');
-    }
-
-    final json = jsonDecode(res.body) as Map<String, dynamic>;
+    final json = await _postOverpass(overpassQl);
     final elements = (json['elements'] as List<dynamic>? ?? []);
     final radars = <RadarPoint>[];
 
     for (final raw in elements) {
       final el = raw as Map<String, dynamic>;
-      final lat = (el['lat'] as num?)?.toDouble();
-      final lon = (el['lon'] as num?)?.toDouble();
+      final double? lat = (el['lat'] as num?)?.toDouble() ??
+          ((el['center'] as Map<String, dynamic>?)?['lat'] as num?)?.toDouble();
+      final double? lon = (el['lon'] as num?)?.toDouble() ??
+          ((el['center'] as Map<String, dynamic>?)?['lon'] as num?)?.toDouble();
       if (lat == null || lon == null) continue;
 
       final tags = (el['tags'] as Map<String, dynamic>?) ?? {};
@@ -193,7 +218,7 @@ out 60;
         lat: lat,
         lng: lon,
         speedLimit: speed,
-        label: (tags['name'] as String?) ?? 'Radar Fixo OSM',
+        label: (tags['name'] as String?) ?? 'Radar Fixo OSM ($speed km/h)',
         isCustom: false,
       ));
     }

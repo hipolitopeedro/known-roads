@@ -244,3 +244,44 @@ class PhotoCheckpoint {
     );
   }
 }
+
+/// Radares pré-carregados nos principais corredores de Belo Horizonte (MG),
+/// combinados em tempo real com os radares consultados via OpenStreetMap Overpass.
+const List<RadarPoint> defaultBhRadars = [
+  // Dados OSM verificados em BH
+  RadarPoint(lat: -19.888914, lng: -43.967382, speedLimit: 60, label: 'Radar Av. Pres. Carlos Luz (60 km/h)', isCustom: false),
+  RadarPoint(lat: -19.888753, lng: -43.929168, speedLimit: 60, label: 'Radar Av. Cristiano Machado (60 km/h)', isCustom: false),
+  RadarPoint(lat: -19.863041, lng: -43.957837, speedLimit: 60, label: 'Radar Av. Antônio Carlos (60 km/h)', isCustom: false),
+  RadarPoint(lat: -19.876079, lng: -44.033968, speedLimit: 60, label: 'Radar Via Expressa / Contagem (60 km/h)', isCustom: false),
+  RadarPoint(lat: -19.840236, lng: -43.935917, speedLimit: 70, label: 'Radar Av. Cristiano Machado (70 km/h)', isCustom: false),
+  RadarPoint(lat: -19.903546, lng: -43.899843, speedLimit: 60, label: 'Radar Leste / José Cândido (60 km/h)', isCustom: false),
+  RadarPoint(lat: -19.892921, lng: -43.964620, speedLimit: 60, label: 'Radar Região Pampulha/Caiçara (60 km/h)', isCustom: false),
+  RadarPoint(lat: -19.879272, lng: -43.976062, speedLimit: 60, label: 'Radar Av. Tancredo Neves (60 km/h)', isCustom: false),
+  // Principais corredores Centro / Zona Sul / Oeste / Contorno
+  RadarPoint(lat: -19.914800, lng: -43.943200, speedLimit: 60, label: 'Radar Av. do Contorno / Rodoviária', isCustom: false),
+  RadarPoint(lat: -19.918200, lng: -43.947500, speedLimit: 60, label: 'Radar Av. Amazonas / Centro', isCustom: false),
+  RadarPoint(lat: -19.922800, lng: -43.934500, speedLimit: 60, label: 'Radar Av. Afonso Pena / Parque Municipal', isCustom: false),
+  RadarPoint(lat: -19.925500, lng: -43.942200, speedLimit: 60, label: 'Radar Av. Bias Fortes / Praça Raul Soares', isCustom: false),
+  RadarPoint(lat: -19.932400, lng: -43.927800, speedLimit: 60, label: 'Radar Av. Afonso Pena / Savassi', isCustom: false),
+  RadarPoint(lat: -19.936900, lng: -43.938400, speedLimit: 60, label: 'Radar Av. do Contorno / Lourdes', isCustom: false),
+  RadarPoint(lat: -19.939500, lng: -43.952200, speedLimit: 60, label: 'Radar Av. Prudente de Morais', isCustom: false),
+  RadarPoint(lat: -19.946200, lng: -43.934500, speedLimit: 60, label: 'Radar Av. N. Sra. do Carmo / São Pedro', isCustom: false),
+  RadarPoint(lat: -19.956500, lng: -43.938800, speedLimit: 60, label: 'Radar Av. N. Sra. do Carmo / Sion', isCustom: false),
+  RadarPoint(lat: -19.948800, lng: -43.956800, speedLimit: 60, label: 'Radar Av. Raja Gabaglia / Luxemburgo', isCustom: false),
+  RadarPoint(lat: -19.961200, lng: -43.959500, speedLimit: 60, label: 'Radar Av. Raja Gabaglia / Estoril', isCustom: false),
+  RadarPoint(lat: -19.969800, lng: -43.954200, speedLimit: 60, label: 'Radar Anel Rodoviário / BH Shopping', isCustom: false),
+  RadarPoint(lat: -19.931800, lng: -43.963500, speedLimit: 60, label: 'Radar Av. Amazonas / Gutierrez', isCustom: false),
+  RadarPoint(lat: -19.937200, lng: -43.975400, speedLimit: 60, label: 'Radar Av. Amazonas / Nova Suíça', isCustom: false),
+  RadarPoint(lat: -19.921500, lng: -43.968200, speedLimit: 60, label: 'Radar Av. Tereza Cristina / Calafate', isCustom: false),
+  RadarPoint(lat: -19.914500, lng: -43.961500, speedLimit: 60, label: 'Radar Av. Dom Pedro II / Carlos Prates', isCustom: false),
+  RadarPoint(lat: -19.908200, lng: -43.952000, speedLimit: 60, label: 'Radar Av. Antônio Carlos / Lagoinha', isCustom: false),
+  RadarPoint(lat: -19.919500, lng: -43.918500, speedLimit: 60, label: 'Radar Av. dos Andradas / Santa Efigênia', isCustom: false),
+  RadarPoint(lat: -19.912500, lng: -43.924200, speedLimit: 60, label: 'Radar Av. do Contorno / Floresta', isCustom: false),
+  RadarPoint(lat: -19.902200, lng: -43.938800, speedLimit: 60, label: 'Radar Av. Cristiano Machado / Silviano Brandão', isCustom: false),
+  RadarPoint(lat: -19.927800, lng: -43.991200, speedLimit: 80, label: 'Radar Anel Rodoviário / Betânia (80 km/h)', isCustom: false),
+  RadarPoint(lat: -19.906500, lng: -43.996800, speedLimit: 70, label: 'Radar Anel Rodoviário / Padre Eustáquio (70 km/h)', isCustom: false),
+  RadarPoint(lat: -19.938800, lng: -43.998500, speedLimit: 60, label: 'Radar Via Expressa / Barreiro-Oeste', isCustom: false),
+  RadarPoint(lat: -19.916200, lng: -43.936200, speedLimit: 50, label: 'Radar Av. dos Andradas / Parque', isCustom: false),
+  RadarPoint(lat: -19.928900, lng: -43.949800, speedLimit: 60, label: 'Radar Av. Álvares Cabral / Santo Agostinho', isCustom: false),
+  RadarPoint(lat: -19.924800, lng: -43.938500, speedLimit: 60, label: 'Radar Av. Bias Fortes / Centro', isCustom: false),
+];

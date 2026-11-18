@@ -46,7 +46,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   // Dados persistidos de exploração e rolês
   Set<String> _exploredCells = {};
   List<List<LatLng>> _historicalTrails = [];
-  List<RadarPoint> _osmRadars = [];
+  List<RadarPoint> _osmRadars = List<RadarPoint>.from(defaultBhRadars);
   List<RadarPoint> _customRadars = [];
   List<PhotoCheckpoint> _checkpoints = [];
 
@@ -92,6 +92,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
 
   Future<void> _initStateAsync() async {
     await _loadPersistedData();
+    _loadRadarsAround(_currentPos, silent: true);
     await _startGpsTracking();
   }
 
@@ -410,22 +411,37 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
     if (_loadingRadars) return;
     setState(() => _loadingRadars = true);
     try {
-      final radars = await MapApiService.fetchRadarsNearby(center);
+      final fetched = await MapApiService.fetchRadarsNearby(center);
       if (!mounted) return;
+      final merged = List<RadarPoint>.from(_osmRadars);
+      int added = 0;
+      for (final r in fetched) {
+        final dup = merged.any(
+          (e) => GridCellHelper.haversineMeters(e.latLng, r.latLng) < 25.0,
+        );
+        if (!dup) {
+          merged.add(r);
+          added++;
+        }
+      }
       setState(() {
-        _osmRadars = radars;
+        _osmRadars = merged;
         _loadingRadars = false;
       });
       _checkRadarProximity(_currentPos);
       if (!silent) {
         _showToast(
-          '${radars.length} radares carregados ao redor + ${_customRadars.length} seus.',
+          '${merged.length} radares ativos no mapa ($added novos do OSM).',
         );
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _loadingRadars = false);
-      if (!silent) _showToast('Não foi possível consultar radares: $e');
+      if (!silent) {
+        _showToast(
+          'Mantendo ${_osmRadars.length} radares locais (OSM indisponível).',
+        );
+      }
     }
   }
 
@@ -440,6 +456,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
       if (!mounted) return;
       setState(() {
         _activeRoute = route;
+        _searchResults = [];
         _isSearching = false;
         _followGps = false;
       });
@@ -822,12 +839,16 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
       allOrangePolylines.add(Polyline(
         points: trail,
         strokeWidth: 9.0,
+        strokeCap: StrokeCap.round,
+        strokeJoin: StrokeJoin.round,
         color: const Color(0x55FF6600),
       ));
       // Camada 2: Núcleo Laranja Neon intenso
       allOrangePolylines.add(Polyline(
         points: trail,
         strokeWidth: 4.2,
+        strokeCap: StrokeCap.round,
+        strokeJoin: StrokeJoin.round,
         color: const Color(0xFFFF7A00),
       ));
     }
@@ -856,10 +877,11 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
             ),
             children: [
               TileLayer(
-                key: ValueKey(_darkMap),
+                key: ValueKey('base_$_darkMap'),
                 urlTemplate: _darkMap
-                    ? 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png?key=cb1_5b8h_1_e226805efdf54dbf7a6a3325'
-                    : 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png?key=cb1_5b8h_1_e226805efdf54dbf7a6a3325',
+                    ? 'https://basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png?key=cb1_5b8h_1_e226805efdf54dbf7a6a3325'
+                    : 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=cb1_5b8h_1_e226805efdf54dbf7a6a3325',
+                retinaMode: true,
                 userAgentPackageName: 'com.pedro.known_roads',
               ),
 
@@ -873,46 +895,99 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                     Polyline(
                       points: _activeRoute!.points,
                       strokeWidth: 8.0,
+                      strokeCap: StrokeCap.round,
+                      strokeJoin: StrokeJoin.round,
                       color: const Color(0x4400E5FF),
                     ),
                     Polyline(
                       points: _activeRoute!.points,
                       strokeWidth: 4.5,
+                      strokeCap: StrokeCap.round,
+                      strokeJoin: StrokeJoin.round,
                       color: const Color(0xFF00E5FF),
                     ),
                   ],
                 ),
 
+              // 2b. Rótulos de ruas e bairros em branco nítido sobre o mapa escuro
+              if (_darkMap)
+                IgnorePointer(
+                  child: ColorFiltered(
+                    colorFilter: const ColorFilter.matrix(<double>[
+                      3.2, 0, 0, 0, 0,
+                      0, 3.2, 0, 0, 0,
+                      0, 0, 3.2, 0, 0,
+                      0, 0, 0, 1, 0,
+                    ]),
+                    child: TileLayer(
+                      key: const ValueKey('dark_labels'),
+                      urlTemplate:
+                          'https://basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png?key=cb1_5b8h_1_e226805efdf54dbf7a6a3325',
+                      retinaMode: true,
+                      userAgentPackageName: 'com.pedro.known_roads',
+                    ),
+                  ),
+                ),
+
               // 3. Marcadores (Radares, Checkpoints, Busca, Destino e Moto)
               MarkerLayer(
                 markers: [
-                  // Radares fixos OSM + customizados
+                  // Radares estilo Waze / Google Maps
                   ...allRadars.map((r) => Marker(
                         point: r.latLng,
-                        width: 42,
-                        height: 42,
+                        width: 52,
+                        height: 54,
                         child: GestureDetector(
                           onTap: () => _showToast(
                               '${r.label} • Limite: ${r.speedLimit} km/h'),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF161922),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFFFF2A55),
-                                width: 2.5,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                '${r.speedLimit}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 12,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF161922),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: Colors.amberAccent, width: 1.2),
+                                ),
+                                child: const Icon(
+                                  Icons.videocam,
+                                  color: Colors.amberAccent,
+                                  size: 12,
                                 ),
                               ),
-                            ),
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: const Color(0xFFFF1744),
+                                    width: 3.5,
+                                  ),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0xAA000000),
+                                      blurRadius: 6,
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${r.speedLimit}',
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 11,
+                                      height: 1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       )),
@@ -1008,6 +1083,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                         Expanded(
                           child: TextField(
                             controller: _searchCtrl,
+                            onChanged: (_) => setState(() {}),
                             onSubmitted: (_) => _searchText(),
                             style: const TextStyle(
                                 color: Colors.white, fontSize: 14),
@@ -1019,6 +1095,17 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                             ),
                           ),
                         ),
+                        if (_searchCtrl.text.isNotEmpty ||
+                            _searchResults.isNotEmpty)
+                          IconButton(
+                            tooltip: 'Limpar busca',
+                            icon: const Icon(Icons.clear,
+                                color: Colors.white54, size: 18),
+                            onPressed: () {
+                              _searchCtrl.clear();
+                              setState(() => _searchResults = []);
+                            },
+                          ),
                         if (_isSearching)
                           const Padding(
                             padding: EdgeInsets.all(10),
