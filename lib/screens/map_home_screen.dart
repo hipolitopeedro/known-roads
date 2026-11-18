@@ -856,9 +856,10 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
             ),
             children: [
               TileLayer(
+                key: ValueKey(_darkMap),
                 urlTemplate: _darkMap
-                    ? 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'
-                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    ? 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png?key=cb1_5b8h_1_e226805efdf54dbf7a6a3325'
+                    : 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png?key=cb1_5b8h_1_e226805efdf54dbf7a6a3325',
                 userAgentPackageName: 'com.pedro.known_roads',
               ),
 
